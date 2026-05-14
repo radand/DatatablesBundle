@@ -169,12 +169,18 @@ class DatatableQueryBuilder
      */
     private $useCountQueryCache = false;
     /**
+     * Determine if result cache is enabled.
+     *
+     * @var array
+     */
+    private $useResultCache = false;
+    /**
      * Arguments to pass when configuring result cache on query for records retrieval. Those arguments are used when
      * calling useResultCache method on Query object when one is created.
      *
      * @var array
      */
-    private $useResultCacheArgs = [false];
+    private $useResultCacheArgs = [];
     /**
      * Arguments to pass when configuring result cache on query for counting records. Those arguments are used when
      * calling useResultCache method on Query object when one is created.
@@ -285,7 +291,11 @@ class DatatableQueryBuilder
 
         $query = $qb->getQuery();
         $query->setHydrationMode(Query::HYDRATE_ARRAY)->useQueryCache($this->useQueryCache);
-        \call_user_func_array([$query, 'useResultCache'], $this->useResultCacheArgs);
+        if ($this->useResultCache) {
+            \call_user_func_array([$query, 'enableResultCache'], $this->useResultCacheArgs);
+        } else {
+            $query->disableResultCache();
+        }
 
         return $query;
     }
@@ -304,7 +314,11 @@ class DatatableQueryBuilder
 
         $query = $qb->getQuery();
         $query->useQueryCache($this->useCountQueryCache);
-        \call_user_func_array([$query, 'useResultCache'], $this->useCountResultCacheArgs);
+        if ($this->useResultCache) {
+            \call_user_func_array([$query, 'enableResultCache'], $this->useCountResultCacheArgs);
+        } else {
+            $query->disableResultCache();
+        }
 
         return ! $qb->getDQLPart('groupBy')
             ? (int) $query->getSingleScalarResult()
@@ -351,7 +365,8 @@ class DatatableQueryBuilder
      */
     public function useResultCache($bool, $lifetime = null, $resultCacheId = null)
     {
-        $this->useResultCacheArgs = \func_get_args();
+        $this->useResultCache = $bool;
+        $this->useResultCacheArgs = [$lifetime, $resultCacheId];
 
         return $this;
     }
